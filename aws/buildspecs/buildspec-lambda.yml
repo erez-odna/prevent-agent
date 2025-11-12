@@ -8,30 +8,27 @@ phases:
       - aws codeartifact login --tool pip --domain opendna --domain-owner 921320062099 --repository opendna-$ENV
   build:
     commands:
-      # fix a locale issue
-      - locale-gen "en_US.UTF-8"
-      - dpkg-reconfigure locales
-      - export LANG=en_US.utf-8
-      - export LC_ALL=en_US.utf-8
-
       # setup virtualenv
-      - virtualenv -p python3.8 venv
+      - python3.12 -m venv venv
       - . venv/bin/activate
+      - pip install --upgrade pip
 
       - printenv
       - cd src
       - pip install --upgrade pip
       - pip install -r ../requirements.txt
 
-      # install zappa
-      - pip install zappa==0.51.0
-
       - export S3_KEY="${S3_PREFIX}/${CODEBUILD_RESOLVED_SOURCE_VERSION}"
       - export LAMBDA_KEY="${S3_KEY}/lambda-package-${CODEBUILD_RESOLVED_SOURCE_VERSION}.zip"
 
-      - zappa package dev -o /tmp/lambda-package.zip
+      - mkdir -p /tmp/lambda_package
+      - cp -r * /tmp/lambda_package/
+      - cp -r ../venv/lib/python3.12/site-packages/* /tmp/lambda_package/
+      - cd /tmp/lambda_package
+      - zip -r9 ../lambda-package.zip .
 
       - aws s3 cp /tmp/lambda-package.zip s3://$S3_BUCKET/$LAMBDA_KEY
+      - cd ..
       - printf '{"Lambda":"%s", "ArtifactsLocation":"%s"}' $LAMBDA_KEY $S3_KEY > build.json
       - cat build.json
 

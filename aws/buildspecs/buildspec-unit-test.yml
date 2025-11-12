@@ -1,6 +1,9 @@
 version: 0.2
 
 phases:
+  install:
+      runtime-versions:
+        python: 3.12
   pre_build:
     commands:
       - pip3 install awscli --upgrade --user
@@ -9,8 +12,9 @@ phases:
   build:
     commands:
       # setup virtualenv
-      - virtualenv -p python3.8 venv
+      - python3.12 -m venv venv
       - . venv/bin/activate
+      - pip install --upgrade pip
 
       - pip install -r requirements.txt
       - pip install -r requirements_test.txt
