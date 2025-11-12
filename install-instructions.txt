@@ -1,0 +1,2 @@
+# run the following command (you may need to change the last token 'dev' to the current env)
+aws codeartifact login --tool pip --domain opendna  --repository opendna-dev

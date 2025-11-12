@@ -1,0 +1,50 @@
+{
+  "dev": {
+    "apigateway_enabled": true,
+    "apigateway_description": "Enter-project-name Service API",
+    // Define a custom description for the API Gateway console. Default None.
+    "app_function": "app.app",
+    "iam_authorization": true,
+    "cloudwatch_log_level": "OFF",
+    // Enables/configures a level of logging for the given staging. Available options: "OFF", "INFO", "ERROR", default "OFF". C
+    "debug": true,
+    // Print Zappa configuration errors tracebacks in the 500. Default true.
+    "lambda_description": "Enter-project-name service lambda",
+    // However you want to describe your project for the AWS console. Default "Zappa Deployment".
+    "log_level": "DEBUG",
+    // Set the Zappa log level. Can be one of CRITICAL, ERROR, WARNING, INFO and DEBUG. Default: DEBUG
+    "manage_roles": false,
+    // Have Zappa automatically create and define IAM execution roles and policies. Default true. If false, you must define your own IAM Role and role_name setting.
+    "project_name": "enter-project-name-here, e.g. grs",
+    // The name of the project as it appears on AWS. Defaults to a slugified `pwd`.
+    "role_name": "LambdaExecutionRolePlaceholder",
+    // Name of Zappa execution role. Default <project_name>-<env>-ZappaExecutionRole. To use a different, pre-existing policy, you must also set manage_roles to false.
+    "s3_bucket": "ArtifactBucketPlaceholder",
+    "timeout_seconds": 30,
+    // Maximum lifespan for the Lambda function (default 30, max 300.),
+    "binary_support": false,
+    "cors": true,
+    "exclude": [
+      "*.gz",
+      "*.rar",
+      "boto3",
+      "botocore",
+      "coverage",
+      "sphinx",
+      "sphinx-rtd-theme",
+      "sphinxcontrib-httpdomain",
+      "pylint",
+      "pylint-celery",
+      "pylint-common",
+      "pylint-django",
+      "pylint-flask",
+      "pylint-plugin-utils",
+      "unit-test",
+      ".git",
+      "aws",
+      "docs",
+      "non-prod",
+      "__pycache__"
+    ]
+  }
+}

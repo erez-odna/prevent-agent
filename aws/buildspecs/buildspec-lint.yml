@@ -1,0 +1,17 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - pip3 install awscli --upgrade --user
+      - export AWS_ACCOUNT=$(echo $CODEBUILD_BUILD_ARN | cut -f5 -d ':')
+      - aws codeartifact login --tool pip --domain opendna --domain-owner 921320062099 --repository opendna-$ENV
+  build:
+    commands:
+      # setup virtualenv
+      - virtualenv -p python3.8 venv
+      - . venv/bin/activate
+
+      - pip install -r requirements.txt
+      - pip install -r requirements_lint.txt
+      - make lint

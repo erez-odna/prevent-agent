@@ -1,0 +1,45 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - pip3 install awscli --upgrade --user
+      - export AWS_ACCOUNT=$(echo $CODEBUILD_BUILD_ARN | cut -f5 -d ':')
+      - aws codeartifact login --tool pip --domain opendna --domain-owner 921320062099 --repository opendna-$ENV
+  build:
+    commands:
+      # fix a locale issue
+      - locale-gen "en_US.UTF-8"
+      - dpkg-reconfigure locales
+      - export LANG=en_US.utf-8
+      - export LC_ALL=en_US.utf-8
+
+      # setup virtualenv
+      - virtualenv -p python3.8 venv
+      - . venv/bin/activate
+
+      - printenv
+      - cd src
+      - pip install --upgrade pip
+      - pip install -r ../requirements.txt
+
+      # install zappa
+      - pip install zappa==0.51.0
+
+      - export S3_KEY="${S3_PREFIX}/${CODEBUILD_RESOLVED_SOURCE_VERSION}"
+      - export LAMBDA_KEY="${S3_KEY}/lambda-package-${CODEBUILD_RESOLVED_SOURCE_VERSION}.zip"
+
+      - zappa package dev -o /tmp/lambda-package.zip
+
+      - aws s3 cp /tmp/lambda-package.zip s3://$S3_BUCKET/$LAMBDA_KEY
+      - printf '{"Lambda":"%s", "ArtifactsLocation":"%s"}' $LAMBDA_KEY $S3_KEY > build.json
+      - cat build.json
+
+      # copy deploy master to tmp folder, later on placed in artifacts
+      - aws s3 cp ${S3_TEMPLATES_LOCATION}/deploy-master.yml /tmp/deploy-master.yml
+
+artifacts:
+  files:
+    - /tmp/deploy-master.yml
+    - src/build.json
+  discard-paths: yes

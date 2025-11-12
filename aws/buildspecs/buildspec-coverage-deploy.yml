@@ -1,0 +1,12 @@
+version: 0.2
+
+phases:
+  build:
+    commands:
+      - export OUT_FILE="cov.tar.gz"
+      - export COVZIP=$(jq .CovZip build.json -r)
+      - aws s3 cp ${COVZIP} ./${OUT_FILE}
+      - tar -xzvf ${OUT_FILE}
+      - >
+        aws s3 sync ./htmlcov s3://$DOCS_BUCKET/$ENV/$PROJECT_NAME/cov
+        --acl public-read

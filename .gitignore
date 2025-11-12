@@ -1,0 +1,13 @@
+.idea/
+venv/
+.coverage
+htmlcov
+**/__pycache__/
+**/docs/build/
+**/*.pyc
+.results/
+
+unit-test/data/.temp*.json
+unit-test/.output
+
+.env
