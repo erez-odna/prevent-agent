@@ -17,7 +17,7 @@ def raw_validate_schema(req, schema_json):
     try:
         validate(req, load_schema(schema_json))
     except ValidationError as e:
-        raise BadRequest(e.message)
+        raise BadRequest(e.message) from e
 
 
 # decorator for validating a request using a schema

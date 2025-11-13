@@ -20,10 +20,6 @@ def main_handler(event, context):
         print("detected API Gateway event → routing to Flask app")
         return serverless_wsgi.handle_request(app, event, context)
 
-    if "triggerSource" in event:
-        print(f"found triggerSource {event['triggerSource']}")
-        return handle_cognito_triggered_event(event)
-
     if "command" in event:
         print("command in event")
     print(

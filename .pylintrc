@@ -1,5 +1,5 @@
 [MASTER]
-disable=missing-docstring, invalid-name, line-too-long, too-few-public-methods, bad-continuation, locally-disabled, too-many-instance-attributes, too-many-arguments, c-extension-no-member
+disable=missing-docstring, invalid-name, line-too-long, too-few-public-methods, locally-disabled, too-many-instance-attributes, too-many-arguments, c-extension-no-member
 
 [SIMILARITIES]
 

@@ -1,5 +1,5 @@
-import json
-from flask import Blueprint, Response, request
+# import json
+from flask import Blueprint, Response  # , request
 
 from validation.validation import validate_schema
 
@@ -12,44 +12,45 @@ post_blueprint = Blueprint("post", __name__)
 def change_me_handler():
     """Change me
 
-        .. :quickref: Add and item; Add an item to the list
+    .. :quickref: Add and item; Add an item to the list
 
-        **Summary:** |br|
-        Add an item to the list.
+    **Summary:** |br|
+    Add an item to the list.
 
-        :reqjson item_name: (Optional) Item name. Maximum length 256.
+    :reqjson item_name: (Optional) Item name. Maximum length 256.
 
-        :status 200: Success, Item added
-        :status 400: BadRequest, missing or invalid request body or body parts
-        :status 500: InternalServerError, error happened while doing the activity
+    :status 200: Success, Item added
+    :status 400: BadRequest, missing or invalid request body or body parts
+    :status 500: InternalServerError, error happened while doing the activity
 
-        **Example Request:**
+    **Example Request:**
 
-        .. sourcecode:: http
+    .. sourcecode:: http
 
-            HTTP/1.1 200 OK
+        HTTP/1.1 200 OK
 
-            {
-                "item_name": "my-name"
-            }
+        {
+            "item_name": "my-name"
+        }
 
-        **Example Response:**
+    **Example Response:**
 
-        .. sourcecode:: http
+    .. sourcecode:: http
 
-            HTTP/1.1 200 OK
+        HTTP/1.1 200 OK
 
-            {
-                "sys_id": "123456"
-            }
+        {
+            "sys_id": "123456"
+        }
     """
-    # parse arguments
-    req_data = request.get_json()
-    cohort = req_data.get("item-name")
-
-    # add code here
-
-    response_json = {"sys_id": patient_id}
-    response = json.dumps(response_json, indent=4)
-    print(f"added patient with id: {patient_id}")
+    # # parse arguments
+    # req_data = request.get_json()
+    # cohort = req_data.get("item-name")
+    #
+    # # add code here
+    #
+    # response_json = {"sys_id": patient_id}
+    # response = json.dumps(response_json, indent=4)
+    # print(f"added patient with id: {patient_id}")
+    response = "{}"
     return Response(response, status=200, mimetype="application/json")
