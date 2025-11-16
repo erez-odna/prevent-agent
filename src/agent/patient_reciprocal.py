@@ -1,26 +1,38 @@
-import re
-from typing import TypedDict
+import uuid
+from typing import TypedDict, List, Annotated
+
+from IPython.display import Image, display
+
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage
+from langgraph.checkpoint.memory import InMemorySaver
 from pydantic import BaseModel
-from langgraph.graph import StateGraph, START, END
+from langgraph.graph import StateGraph, START, END, add_messages
 
 from agent.llm_chat_model_factory import LlmChatModelFactory
 
 
 # Define conversation state
 class PatientReciprocalState(TypedDict, total=False):
-    age: int
-    gender: str
-    family_history_cancer: str
-    specific_cancer_type: str
+    # age: int
+    # gender: str
+    # family_history_cancer: str
+    # specific_cancer_type: str
+    messages: Annotated[list, add_messages]
 
 
 class PatientReciprocalBot:
     SELECTED_MODEL_NAME = "claude"
 
+    # class PromptInstructions(BaseModel):
+    #     """Instructions on how to prompt the LLM."""
+    #     objective: str
+    #     variables: List[str]
+    #     constraints: List[str]
+    #     requirements: List[str]
+
     def __init__(self):
         self.llm = LlmChatModelFactory().create_model(self.SELECTED_MODEL_NAME)
-        self.llm.bind_tools()
-        self.app = self.build_graph()
+        # self.llm = llm.bind_tools([PatientReciprocalState])
         self.state = PatientReciprocalState()
         self.template = template = """Your job is to get information from a user about their demographic and cancer history.
             You should get the following information from the user:
@@ -35,114 +47,83 @@ class PatientReciprocalBot:
             If you are not able to discern this info, ask them to clarify! Do not attempt to wildly guess.
             
             After you are able to discern all the information, call the relevant tool."""
+        self.app = self.build_graph()
 
+    def get_messages_info(self, messages):
+        return [SystemMessage(content=self.template)] + messages
 
-    def ask_and_parse_age_node(self, state: dict):
-        """
-        If user_input is None, ask the question.
-        Otherwise, validate the input.
-        """
-        print("Bot: Hi! I'm your cancer prevention agent.")
-        answer = input("Bot: How old are you?\nYou: ")
+    @staticmethod
+    def get_state(state):
+        messages = state["messages"]
+        if isinstance(messages[-1], AIMessage) and messages[-1].tool_calls:
+            return "add_tool_message"
+        elif not isinstance(messages[-1], HumanMessage):
+            return END
+        return "get_info"
 
-        # parse result
-        match = re.search(r"\d+", answer)
-        if match:
-            self.state["age"] = int(match.group())
-            response = f"Got it. You’re {state['age']} years old."
-            next_step = True
-        else:
-            response = "Sorry, I didn’t catch your age. Please enter a number."
-            next_step = False
-        return {"messages": [answer]}
+    def get_info_chain(self, state):
+        messages = self.get_messages_info(state["messages"])
+        response = self.llm.invoke(messages)
+        return {"messages": [response]}
 
-    def ask_and_parse_gender_node(self, user_input: str = None):
-        if user_input is None:
-            return {"response": "What is your gender? (Male / Female / Other)"}
+    def information_retrieved(self, state):
+        print("information_retrieved:")
+        print(state)
 
-        gender = user_input.strip().capitalize()
-        if gender in ["Male", "Female", "Other"]:
-            self.state["gender"] = gender
-            response = f"Thanks, I recorded your gender as {gender}."
-            next_step = True
-        else:
-            response = "Please enter one of the following: Male, Female, or Other."
-            next_step = False
-        return {"response": response, "next_step": next_step, "gender": self.state.get("gender")}
-
-    def ask_family_history(self, state: PatientReciprocalState):
-        answer = input("Bot: Do you have any family history of cancer? (yes/no)\nYou: ")
-        self.state["family_history_cancer"] = answer.strip().lower()
-        response = self.llm.invoke(
-            f"Family history of cancer: {self.state['family_history_cancer']}. Respond briefly and supportively."
-        )
-        print("Bot:", response.content)
-        return state
-
-    def follow_up_if_yes(self, state: PatientReciprocalState):
-        answer = input("Bot: Which type(s) of cancer are in your family?\nYou: ")
-        self.state["specific_cancer_type"] = answer.strip()
-        response = self.llm.invoke(
-            f"Specific cancer types in family: {self.state['specific_cancer_type']}. Respond with understanding and support."
-        )
-        print("Bot:", response.content)
-        return state
-
-    def closing(self, state: PatientReciprocalState):
-        summary = (
-            f"Summary — Age: {state.get('age')}, Gender: {state.get('gender')}, "
-            f"Family history of cancer: {state.get('family_history_cancer')}"
-        )
-        if state.get("specific_cancer_type"):
-            summary += f", Specific types: {state.get('specific_cancer_type')}"
-        response = self.llm.invoke(
-            summary + ". Provide a supportive closing message about health awareness."
-        )
-        print("Bot:", response.content)
-        return state
-
-    def should_follow_up(self, state: PatientReciprocalState):
-        return (
-            "follow_up_if_yes"
-            if state.get("family_history_cancer") == "yes"
-            else "closing"
-        )
+    def add_tool_message(self, state):
+        return {
+            "messages": [
+                ToolMessage(
+                    content="Prompt generated!",
+                    tool_call_id=state["messages"][-1].tool_calls[0]["id"],
+                )
+            ]
+        }
 
     def build_graph(self):
         # Build the graph
+        memory = InMemorySaver()
         graph = StateGraph(PatientReciprocalState)
-        graph.add_node("age_node", self.ask_and_parse_age_node)
-        graph.add_node("gender_node", self.ask_and_parse_gender_node)
-        graph.add_node("ask_family_history", self.ask_family_history)
-        graph.add_node("follow_up_if_yes", self.follow_up_if_yes)
-        graph.add_node("closing", self.closing)
+        graph.add_node("get_info", self.get_info_chain)
+        graph.add_node("prompt", self.information_retrieved)
+        graph.add_node("add_tool_message", self.add_tool_message)
 
-        graph.add_edge(START, "age_node")
+        graph.add_edge(START, "get_info")
         graph.add_conditional_edges(
-            "age_node",
-            lambda state: state.get("age") is None,
-            ["age_node", "gender_node"]
+            "get_info",
+            self.get_state,
+            ["get_info", "add_tool_message", END]
         )
-        graph.add_conditional_edges(
-            "gender_node",
-            lambda state: state.get("gender") is None,
-            ["gender_node", "ask_family_history"]
-        )
-
-        graph.add_conditional_edges(
-            "ask_family_history",
-            self.should_follow_up,
-            ["follow_up_if_yes", "closing"]
-        )
-        graph.add_edge("closing", END)
-
-        # Compile and run the graph
-        return graph.compile()
+        compiled = graph.compile(checkpointer=memory)
+        # display(Image(compiled.get_graph().draw_mermaid_png()))
+        return compiled
 
     def run(self):
-        self.app.invoke(self.state)
-        print("Bot: Thank you for your responses. Goodbye!")
-        return self.state
+        cached_human_responses = ["Hi"]
+        cached_response_index = 0
+        config = {"configurable": {"thread_id": str(uuid.uuid4())}}
+        while True:
+            try:
+                user = input("User (q/Q to quit): ")
+            except:
+                user = cached_human_responses[cached_response_index]
+                cached_response_index += 1
+            print(f"User (q/Q to quit): {user}")
+            if user in {"q", "Q"}:
+                print("AI: Byebye")
+                break
+            output = None
+            for output in self.app.stream(
+            {"messages": [HumanMessage(content=user)]}, config=config, stream_mode="updates"
+            ):
+                last_message = next(iter(output.values()))["messages"][-1]
+                last_message.pretty_print()
+
+            if output and "prompt" in output:
+                print("Done!")
+        # self.app.invoke(self.state, config=config)
+        # print("finished running")
+        # return self.state
 
 
 if __name__ == "__main__":
