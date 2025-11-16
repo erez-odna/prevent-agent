@@ -23,7 +23,7 @@ class LlmChatModelFactory:
     def create_model(self, model_key):
         model = self.models[model_key]
         if model_key == "claude":
-            return ChatAnthropic(model=model)
+            return ChatAnthropic(model=model, temperature=0)
         if model_key == "gpt":
-            return ChatOpenAI(model=model)
+            return ChatOpenAI(model=model, temperature=0)
         return None
